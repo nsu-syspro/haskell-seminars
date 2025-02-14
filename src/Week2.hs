@@ -1,5 +1,5 @@
 
-import Prelude hiding (Bool (..), (||))
+import Prelude hiding (zipWith, zip, elem)
 
 alph :: [Char]
 alph = 'a' : alph
@@ -78,12 +78,16 @@ isWhite _     = False
 --isWhite' :: Color -> Bool
 --isWhite' c = c == White
 
-data Bool = False | True
-  deriving (Show)
-
-(||) :: Bool -> Bool -> Bool
-True  || _ = True
-False || y = y
+--data Bool = False | True
+--  deriving (Show, Eq)
+--
+--(||) :: Bool -> Bool -> Bool
+--True  || _ = True
+--False || y = y
+--
+--(&&) :: Bool -> Bool -> Bool
+--True  && True = True
+--_     && _    = False
 
 infixr 2 ||
 
@@ -118,4 +122,86 @@ data List a = Nil | Cons a (List a)
 
 data Pair a b = Pair a b
 
+concatMap' f x = concat (map f x)
+
+
+fib :: [Integer]
+fib = 0 : 1 : zipWith (+) fib (tail fib)
+
+zip = zipWith (,)
+
+zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
+zipWith f (x : xs) (y : ys) = f x y : zipWith f xs ys
+zipWith _ _ _ = []
+
+--   0 : .... <- as
+-- ~ 0 : 1 : ..... <- bs
+-- ~ 0 : 1 : zipWith (+) fib (tail fib)
+-- ~ 0 : 1 : zipWith (+) (0 : as) (1 : bs) 
+-- ~ 0 : 1 : (0 + 1) : zipWith (+) (as) (bs)
+-- ~ 0 : 1 : (0 + 1) : zipWith (+) (as) (bs)
+--
+--
+
+data Point a = Point
+   { pointX :: a
+   , pointY :: a
+   }
+ deriving Show
+
+sumCoords :: Point Int -> Int
+sumCoords (Point {pointY = y}) = y + 1
+
+shiftX :: Int -> Point Int -> Point Int
+shiftX sh p = p { pointX = pointX p + sh }
+
+--type PolarPoint = Point Double
+--type CartPoint  = Point Double
+
+newtype PolarPoint = PolarPoint (Point Double)
+newtype CartPoint  = CartPoint  (Point Double)
+
+bad :: PolarPoint -> CartPoint
+bad (PolarPoint (Point x y)) = CartPoint (Point x y)
+
+newtype Natural = Natural Integer
+ deriving Show
+
+constrNatural :: Integer -> Natural
+constrNatural x
+  | x < 0 = undefined
+  | otherwise = Natural x
+
+constrNaturalMay :: Integer -> Maybe Natural
+constrNaturalMay x
+  | x < 0 = Nothing
+  | otherwise = Just (Natural x)
+
+
+data NonEmptyList a = Single a | NonEmptyCons a (NonEmptyList a)
+
+data Tree a = Leaf a | Branch (Tree a) (Tree a)
+ deriving Show
+
+height :: Tree a -> Int
+height (Leaf _) = 0
+height (Branch l r) = 1 + (height l `max` height r)
+
+isomorphic :: Tree a -> Tree b -> Bool
+isomorphic (Leaf _) (Leaf _) = True
+isomorphic (Branch al ar) (Branch bl br) =
+  isomorphic al bl && isomorphic ar br
+isomorphic _ _ = False
+
+--pointX :: Point a -> a
+--pointX (Point x _) = x
+
+-- [ a
+-- , b
+-- , c
+-- ]
+
+elem :: Eq a => a -> [a] -> Bool
+elem _ []       = False
+elem v (x : xs) = v == x || v `elem` xs
 
