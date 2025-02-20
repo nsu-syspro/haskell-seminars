@@ -139,8 +139,10 @@ zipWith _ _ _ = []
 -- ~ 0 : 1 : zipWith (+) fib (tail fib)
 -- ~ 0 : 1 : zipWith (+) (0 : as) (1 : bs) 
 -- ~ 0 : 1 : (0 + 1) : zipWith (+) (as) (bs)
--- ~ 0 : 1 : (0 + 1) : zipWith (+) (as) (bs)
---
+--                    |_____________________| <- cs
+-- ~ 0 : 1 : (0 + 1) : zipWith (+) (1 : bs) ((0 + 1) : cs)
+-- ~ 0 : 1 : (0 + 1) : (1 + (0 + 1)) : zipWith (+) (bs) (cs)
+-- ~ ...
 --
 
 data Point a = Point
@@ -205,3 +207,18 @@ elem :: Eq a => a -> [a] -> Bool
 elem _ []       = False
 elem v (x : xs) = v == x || v `elem` xs
 
+-- Reminder:
+--
+-- (||) :: Bool -> Bool -> Bool
+-- True  || _ = True
+-- False || y = y
+
+--   elem 9 [6,9,2]
+-- ~ elem 9 (6 : (9 : (2 : [])))
+-- ~ 9 == 6 || 9 `elem` (9 : (2 : []))
+-- ~ False  || 9 `elem` (9 : (2 : []))
+-- ~ 9 `elem` (9 : (2 : []))
+-- ~ elem 9 (9 : (2 : []))
+-- ~ 9 == 9 || 9 `elem` (2 : [])
+-- ~ True   || 9 `elem` (2 : [])
+-- ~ True
