@@ -88,8 +88,8 @@ isWhite _     = False
 --(&&) :: Bool -> Bool -> Bool
 --True  && True = True
 --_     && _    = False
-
-infixr 2 ||
+--
+--infixr 2 ||
 
 
 data SafeDivResult = DivByZero | Result Integer
@@ -145,26 +145,39 @@ zipWith _ _ _ = []
 -- ~ ...
 --
 
+-- Record syntax for ADT
+
 data Point a = Point
    { pointX :: a
    , pointY :: a
    }
  deriving Show
 
+-- Can pattern match specific "fields"
 sumCoords :: Point Int -> Int
 sumCoords (Point {pointY = y}) = y + 1
 
+-- Or create new values with specific "fields" updated (like copy constructor)
 shiftX :: Int -> Point Int -> Point Int
 shiftX sh p = p { pointX = pointX p + sh }
 
+-- Synonyms denote the same type:
+--
 --type PolarPoint = Point Double
 --type CartPoint  = Point Double
+
+-- However `newtype` allows creation of distinct types
+-- which are erased at compile-time.
+-- So there is no overhead compared to `data` construct
 
 newtype PolarPoint = PolarPoint (Point Double)
 newtype CartPoint  = CartPoint  (Point Double)
 
+-- Compared to synonyms require explicit construction and deconstruction
 bad :: PolarPoint -> CartPoint
 bad (PolarPoint (Point x y)) = CartPoint (Point x y)
+
+-- `newtype` is good for narrowing value range of a type or providing a different API for it
 
 newtype Natural = Natural Integer
  deriving Show
