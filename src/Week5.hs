@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 import Prelude hiding (Eq, Eq(..), elem)
+import Data.Maybe (maybeToList)
 
 f :: a -> a
 f x = x
@@ -102,3 +103,38 @@ class F x where
 --instance F (A a) => F (A a)
 
 instance F (A (A a)) => F (A a)
+
+
+h1, h2 :: a -> Maybe a
+h1 = Just
+h2 = const Nothing
+
+m, m1 :: (a -> Maybe b) -> [a] -> [b]
+m f [] = []
+m f (x : xs) = maybeToList (f x) ++ m f xs
+-- m f (x : xs) = case f x of
+--   Just v  -> v : m f xs
+--   Nothing -> m f xs
+
+m' :: (a -> Maybe b) -> [a] -> [b]
+m' _ _ = []
+
+m1 f xs = take 5 $ m f xs
+
+
+
+data Foo x = Foo x
+  deriving Show
+
+newtype Bar x = Bar x
+  deriving Show
+
+test1 = case undefined     of { _ -> 42 }
+test2 = case Foo undefined of { Foo _ -> 42 }
+test3 = case Foo undefined of { _ -> 42 }
+test4 = case Bar undefined of { Bar _ -> 42 }
+test5 = case Bar undefined of { _ -> 42 }
+test6 = case undefined     of { Foo _ -> 42 }
+test7 = case undefined     of { Bar _ -> 42 }
+
+
