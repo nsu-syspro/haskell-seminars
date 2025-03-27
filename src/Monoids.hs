@@ -6,6 +6,7 @@ import Prelude hiding
 import Data.List.NonEmpty (NonEmpty, NonEmpty(..))
 import Data.List (sortBy)
 import Data.Ord (comparing)
+import Data.Semigroup (Max (..))
 
 class Semigroup a where
   (<>) :: a -> a -> a
@@ -168,27 +169,61 @@ mySort' = sortBy $ mconcat
 isVowel :: Char -> Bool
 isVowel = (`elem` "aeiou")
 
-type Tree a = Tree' (Sum Int) a
-
-data Tree' m a = Leaf a | Node m (Tree' m a) (Tree' m a)
+newtype FirstM a = FirstM { getFirstM :: Maybe a }
   deriving Show
 
+instance Semigroup (FirstM a) where
+  (FirstM (Just v)) <> _ = FirstM $ Just v
+  _ <> x = x
+
+instance Monoid (FirstM a) where
+  mempty = FirstM Nothing
+
+-- LastM is similar
+-- See Data.Monoid.First
+-- And also Data.Semigroup.First
+
+newtype Dual a = Dual { getDual :: a }
+
+instance Semigroup a => Semigroup (Dual a) where
+  Dual a <> Dual b = Dual (b <> a)
+
+instance Monoid a => Monoid (Dual a) where
+  mempty = Dual mempty
+
+
+-- FingerTree
+--
+-- See Data.Sequence
+--
+-- and https://www.staff.city.ac.uk/~ross/papers/FingerTree.html
+
+type Tree a = Tree' (Sum Int, Max a) a
+
+data Tree' m a = Leaf m a | Node m (Tree' m a) (Tree' m a)
+  deriving Show
+
+tag :: Tree' m a -> m
+tag (Leaf t _) = t
+tag (Node t _ _) = t
+
+nleafs :: Tree a -> Int
+nleafs n = getSum $ fst (tag n)
+
 elemT :: Int -> Tree a -> a
-elemT 0 (Leaf v) = v
-elemT _ (Leaf _) = error "out of bounds"
-elemT i (Node (Sum ln) l r)
-  | i < ln = elemT i l
-  | otherwise = elemT (i - ln) r
+elemT 0 (Leaf _ v) = v
+elemT _ (Leaf _ _) = error "out of bounds"
+elemT i (Node _ l r)
+  | i < nleafs l = elemT i l
+  | otherwise = elemT (i - nleafs l) r
 
 leaf :: a -> Tree a
-leaf = Leaf
+leaf x = Leaf (Sum 1, Max x) x
 
-node :: Tree a -> Tree a -> Tree a
-node l@(Leaf _)                r = Node (Sum 1) l r
-node l@(Node n _ (Leaf _))     r = Node (n <> Sum 1) l r
-node l@(Node n _ (Node m _ _)) r = Node (n <> m) l r
+node :: Semigroup m => Tree' m a -> Tree' m a -> Tree' m a
+node l r = Node (tag l <> tag r) l r
 
-exampleTree :: Tree Char
-exampleTree =
-  node (node (node (leaf 'h') (leaf 'e')) (leaf 'l'))
-         (node (leaf 'l') (leaf 'o'))
+--exampleTree :: Tree Char
+--exampleTree =
+--  node (node (node (leaf 'h') (leaf 'e')) (leaf 'l'))
+--         (node (leaf 'l') (leaf 'o'))
