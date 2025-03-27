@@ -198,7 +198,7 @@ instance Monoid a => Monoid (Dual a) where
 --
 -- and https://www.staff.city.ac.uk/~ross/papers/FingerTree.html
 
-type Tree a = Tree' (Sum Int, Max a) a
+type Tree a = Tree' (Sum Int, Min a) a
 
 data Tree' m a = Leaf m a | Node m (Tree' m a) (Tree' m a)
   deriving Show
@@ -210,6 +210,9 @@ tag (Node t _ _) = t
 nleafs :: Tree a -> Int
 nleafs n = getSum $ fst (tag n)
 
+minElem :: Tree a -> a
+minElem n = getMin $ snd (tag n)
+
 elemT :: Int -> Tree a -> a
 elemT 0 (Leaf _ v) = v
 elemT _ (Leaf _ _) = error "out of bounds"
@@ -218,12 +221,18 @@ elemT i (Node _ l r)
   | otherwise = elemT (i - nleafs l) r
 
 leaf :: a -> Tree a
-leaf x = Leaf (Sum 1, Max x) x
+leaf x = Leaf (Sum 1, Min x) x
 
 node :: Semigroup m => Tree' m a -> Tree' m a -> Tree' m a
 node l r = Node (tag l <> tag r) l r
 
---exampleTree :: Tree Char
---exampleTree =
---  node (node (node (leaf 'h') (leaf 'e')) (leaf 'l'))
---         (node (leaf 'l') (leaf 'o'))
+exampleTree :: Tree Char
+exampleTree =
+  node (node (node (leaf 'h') (leaf 'e')) (leaf 'l'))
+         (node (leaf 'l') (leaf 'o'))
+
+-- >>> elemT 1 exampleTree
+-- 'e'
+-- >>> minElem exampleTree
+-- 'e'
+
