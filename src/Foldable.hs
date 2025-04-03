@@ -1,8 +1,8 @@
 {-# LANGUAGE NoStarIsType #-}
 
-import Data.Semigroup
-import Data.Monoid
-import Prelude hiding (foldr, foldl, foldMap, Foldable, Foldable(..), concat, concatMap)
+import Data.Semigroup hiding (Any, getAny)
+import Data.Monoid hiding (Any, getAny)
+import Prelude hiding (foldr, foldl, foldMap, foldl', foldr', foldMap', Foldable, Foldable(..), concat, concatMap, any)
 import Data.Kind (Type)
 
 -- foldr :: (a -> b -> b) -> b -> [a] -> b
@@ -55,12 +55,23 @@ class Foldable t where
   foldMap :: Monoid b => (a -> b) -> t a -> b
   foldMap f = foldr (\x m -> f x <> m) mempty
 
+  foldMap' :: Monoid b => (a -> b) -> t a -> b
+  --foldMap' f = foldr (\x m -> let r = f x in r `seq` r <> m) mempty
+  foldMap' f = foldl' (\m x -> m <> f x) mempty
+  
   foldr :: (a -> b -> b) -> b -> t a -> b
   foldr f s xs = appEndo (foldMap (Endo . f) xs) s
 
   foldl :: (b -> a -> b) -> b -> t a -> b
   foldl f s xs =
     (appEndo . getDual) (foldMap (Dual . Endo . flip f) xs) s
+
+  foldr' :: (a -> b -> b) -> b -> t a -> b
+  foldr' f s xs = appEndo' (foldMap' (Endo' . f) xs) s
+
+  foldl' :: (b -> a -> b) -> b -> t a -> b
+  foldl' f s xs =
+    (appEndo' . getDual) (foldMap (Dual . Endo' . flip f) xs) s
 
   -- Generalized mconcat
   fold :: Monoid a => t a -> a
@@ -70,14 +81,17 @@ class Foldable t where
   toList = foldMap (\c -> [c])
 
   null :: t a -> Bool
-  null = not . getAny . foldMap (Any . const True)
+  --null = not . getAny . foldMap (Any . const True)
+  null = not . any (const True)
 
   -- Monoid homomorphism
   -- or in other words lists can simulate integers
   length :: t a -> Int
   length = getSum . foldMap (const (Sum 1))
 
-  --elem :: Eq a => a -> t a -> Bool
+  elem :: Eq a => a -> t a -> Bool
+  --elem x = getAny . foldMap (Any . (== x))
+  elem x = any (== x)
   
   maximum :: Ord a => t a -> a
   --maximum = getBadMax . foldMap BadMax
@@ -88,7 +102,9 @@ class Foldable t where
 
   --minimum :: Ord a => t a -> a
   --sum :: Num a => t a -> a
-  --product :: Num a => t a -> a
+
+  product :: Num a => t a -> a
+  product = getProduct . foldMap Product
 
   -- How to implement these?
   --
@@ -105,6 +121,44 @@ concat = fold
 concatMap :: Foldable t => (a -> [b]) -> t a -> [b]
 concatMap = foldMap
 
+any :: Foldable t => (a -> Bool) -> t a -> Bool
+any p = getAny . foldMap (Any . p)
+
+------------
+-- Monoids
+
+newtype Any = Any { getAny :: Bool }
+  deriving Show
+
+instance Semigroup Any where
+  -- This will not short-circuit
+  --Any True  <> Any True  = Any True
+  --Any True  <> Any False = Any True
+  Any True  <> Any _ = Any True
+  Any False <> r     = r
+
+instance Monoid Any where
+  mempty = Any False
+
+newtype Endo' a = Endo' { appEndo' :: a -> a }
+
+instance Semigroup (Endo' a) where
+  Endo' f <> Endo' g =
+    let f' !x = f x
+        g' !x = g x
+    in  Endo' (\y -> f' (g' y))
+    --Endo' (\x ->
+    --  let g' = g x
+    --  in  g' `seq` f g'
+    --  )
+  -- (<>) = (.)
+
+instance Monoid (Endo' a) where
+  mempty = Endo' id
+
+-- Example of using bang pattern for strict evaluation
+--f x y = let !s = (x + y) in s
+
 ------------
 -- Instances
 
@@ -119,12 +173,11 @@ instance Foldable Maybe where
   foldMap _ Nothing = mempty
   foldMap f (Just x) = f x
 
+instance Foldable [] where
+  foldMap f = mconcat . map f
 
 --------------
 -- Binary Tree
-
-instance Foldable [] where
-  foldMap f = mconcat . map f
 
 data Tree a = Leaf | Branch (Tree a) a (Tree a)
   deriving (Show)
