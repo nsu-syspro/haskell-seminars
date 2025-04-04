@@ -1,7 +1,9 @@
 {-# LANGUAGE NoStarIsType #-}
 
 import Data.Semigroup hiding (Any, getAny)
+import qualified Data.Semigroup as S
 import Data.Monoid hiding (Any, getAny)
+import qualified Data.Monoid as M
 import Prelude hiding (foldr, foldl, foldMap, foldl', foldr', foldMap', Foldable, Foldable(..), concat, concatMap, any)
 import Data.Kind (Type)
 
@@ -124,6 +126,16 @@ concatMap = foldMap
 any :: Foldable t => (a -> Bool) -> t a -> Bool
 any p = getAny . foldMap (Any . p)
 
+find :: (Foldable t) => (a -> Bool) -> t a -> Maybe a
+find p = M.getFirst . foldMap (M.First . toMaybe p)
+ where
+  toMaybe p a = if p a then Just a else Nothing
+
+safeMaximum :: (Foldable t, Ord a) => t a -> Maybe a
+safeMaximum = (maybe Nothing (Just . getMax)) . foldMap (Just . Max)
+
+
+
 ------------
 -- Monoids
 
@@ -194,5 +206,31 @@ exampleTree = Branch
   'l'
   (Branch (Branch Leaf 'l' Leaf) 'o' Leaf)
 
+
+-- Catamorphism
+--
+-- Generalizes recursion over ADT
+--
+-- If you pass ADT constructors to catamorphism
+-- you will get the same structure
+--
+-- In Tree example:
+--
+--   treeFold Leaf Branch = id
+
+-- foldr :: (a -> b -> b) -> t a -> b
+treeFold :: b -> (b -> a -> b -> b) -> Tree a -> b
+treeFold lv bf Leaf = lv
+treeFold lv bf (Branch l v r) =
+  let lr = treeFold lv bf l
+      rr = treeFold lv bf r
+  in bf lr v rr
+
+treeDepth :: Tree a -> Int
+treeDepth = treeFold 0 (\l _ r -> 1 + max l r)
+
+treeDepth' :: Tree a -> Int
+treeDepth' Leaf = 0
+treeDepth' (Branch l _ r) = 1 + (treeDepth' l `max` treeDepth' r)
 
 

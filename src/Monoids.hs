@@ -96,6 +96,13 @@ instance (Semigroup a, Semigroup b) => Semigroup (a, b) where
 instance (Monoid a, Monoid b) => Monoid (a, b) where
   mempty = (mempty, mempty)
 
+instance (Semigroup a) => Semigroup (Maybe a) where
+  Just x <> Just y = Just (x <> y)
+  x <> Nothing = x
+  Nothing <> y = y
+
+instance (Monoid a) => Monoid (Maybe a) where
+  mempty = Nothing
 
 -- Endomorphism
 --
