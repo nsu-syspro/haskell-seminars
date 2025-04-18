@@ -71,6 +71,123 @@ instance Applicative Maybe where
 -- * Applicative lists
 --
 -- There are two ways to implement applicative for list
+--
+-- [(+2),(*2)] <*> [1,2,3] = ?
+--
+--   (1)   (+2) <$> [1,2,3] ++ (*2) <$> [1,2,3]
+--       ~ [3,4,5,2,4,6]
+--   (2)   zipWith ($) [(+2),(*2)] [1,2,3]
+--       ~ [3,4]
+--        
+-- This one only works for functions (a -> a) aka endomorphisms
+--
+--   (3)   ((+2) . (*2)) <$> [1,2,3]
+--       ~ [4,6,8]
+
+instance Applicative [] where
+  pure x = [x]
+  (<*>) :: [a -> b] -> [a] -> [b]
+  fs <*> xs = [ f x | f <- fs, x <- xs ]
+
+newtype ZipList a = ZipList { getZipList :: [a] }
+  deriving Show
+
+instance Functor ZipList where
+  --fmap f = ZipList . map f . getZipList
+  fmap f x = pure f <*> x
+
+instance Applicative ZipList where
+  (<*>) :: ZipList (a -> b) -> ZipList a -> ZipList b
+  ZipList fs <*> ZipList xs = ZipList (zipWith ($) fs xs)
+  --(<*>) = ZipList . zipWith ($)
+  -- We need some way to do something like this:
+  --
+  --   zipWith ($) :: [a -> b] -> [a] -> [b]
+  --   getZipList :: ZipList a -> [a]
+  --   _ :: ZipList (a -> b) -> ZipList a -> [b]
+
+  pure :: a -> ZipList a
+  pure x = ZipList (repeat x)
+  --pure x = ZipList [x]
+  -- This fails Identity for
+  --
+  --   pure id <*> [1,2,3] = [1]
+
+-- This one only works for functions (a -> a) aka endomorphisms
+--
+--newtype RustamList a = RustamList { getRustam :: [a] }
+--  deriving Show
+--
+--instance Functor RustamList where
+--  fmap f x = pure f <*> x
+--
+--instance Applicative RustamList where
+--  RustamList fs <*> RustamList xs = RustamList 
+
+-- Reader functor/monad
+instance Applicative ((->) e) where
+  --(<*>) :: f (a -> b) -> f a -> f b
+  (<*>) :: (e -> (a -> b)) -> (e -> a) -> (e -> b)
+  f <*> g = \e -> f e (g e)
+  -- f :: e -> (a -> b)
+  -- g :: e -> a
+  -- g e :: a
+  -- f e :: a -> b
+  -- (f e) (g e) :: b
+
+  pure :: a -> (e -> a)
+  pure = const
+
+-- Writer functor/monad
+instance Monoid e => Applicative ((,) e) where
+  (<*>) :: (e, a -> b) -> (e, a) -> (e, b)
+  (e1, f) <*> (e2, x) = (e1 <> e2, f x)
+
+  pure :: a -> (e, a)
+  pure x = (mempty, x)
+
+instance Applicative (Either e) where
+  pure = Right
+  Right f <*> Right x = Right (f x)
+  Left e <*> _ = Left e
+  _ <*> Left e = Left e
+
+
+-- * Laws
+--
+-- - Identity
+--
+--   pure id <*> v = v    or    id <$> v = v
+--
+-- - Composition
+--
+--   pure (.) <*> u <*> v <*> w = u <*> (v <*> w)
+--     or
+--   (.) <$> u <*> v <*> w = u <*> (v <*> w)
+--
+-- - Homomorphism
+--
+--   pure f <*> pure x = pure (f x)
+--     or
+--   f <$> pure x = pure (f x)
+--
+-- - Interchange
+--
+--   u <*> pure y = pure ($ y) <*> u
+--     or
+--   u <*> pure y = ($ y) <$> u
+--
+--
+-- Laws describe algorithm of moving all pure arguments
+-- to the left of
+--   
+--   a1 <*> a2 <*> ... <*> an
+--
+-- to become
+--
+--   pure f <*> a1' <*> a2' <*> ... <*> an'
+--
+-- So that all ai' will not have pure.
 
 -- * Examples
 
