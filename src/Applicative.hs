@@ -54,6 +54,9 @@ liftA3 g fa fb fc = g <$> fa <*> fb <*> fc
   -- g <$> fa <*> fb :: f (c -> d)
   -- g <$> fa <*> fb <*> fc :: f d
 
+liftA :: Applicative f => (a -> b) -> f a -> f b
+liftA f fa = pure f <*> fa
+
 instance Applicative Maybe where
   pure :: a -> Maybe a
   pure = Just
@@ -94,7 +97,8 @@ newtype ZipList a = ZipList { getZipList :: [a] }
 
 instance Functor ZipList where
   --fmap f = ZipList . map f . getZipList
-  fmap f x = pure f <*> x
+  --fmap f x = pure f <*> x
+  fmap = liftA
 
 instance Applicative ZipList where
   (<*>) :: ZipList (a -> b) -> ZipList a -> ZipList b
