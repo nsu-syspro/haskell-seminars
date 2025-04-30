@@ -1,9 +1,12 @@
 {-# LANGUAGE Haskell2010 #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 import Prelude hiding (Traversable(..))
 import Data.Coerce (coerce)
+import Text.Read (readMaybe)
 
 -- Let's try to implement following function:
 --
@@ -75,8 +78,47 @@ instance Foldable Identity where
 newtype Const a b = Const { getConst :: a }
   deriving (Show, Semigroup, Monoid)
 
-instance Functor (Const a) where
-  fmap = coerce
+instance Functor (Const e) where
+  fmap :: (a -> b) -> Const e a -> Const e b
+  fmap _ = coerce
+
+instance Monoid e => Applicative (Const e) where
+  pure :: a -> Const e a
+  pure _ = mempty
+  (<*>) :: Const e (a -> b) -> Const e a -> Const e b
+  -- Requires ScopedTypeVariables:
+  --(<*>) = coerce ((<>) :: e -> e -> e)
+  -- Requires TypeApplications:
+  (<*>) = coerce ((<>) @e)
+
+-- * fmapDefault and foldMapDefault
+
+fmapDefault :: forall t a b. Traversable t => (a -> b) -> t a -> t b
+--fmapDefault g = runIdentity . traverse (Identity . g)
+fmapDefault = coerce (traverse @t @Identity @a @b)
+
+foldMapDefault :: forall t a m. (Traversable t, Monoid m) => (a -> m) -> t a -> m
+--foldMapDefault g = getConst . traverse (Const . g)
+foldMapDefault = coerce (traverse @t @(Const m) @a @m)
+
+-- * Tree
+
+data Tree a = Empty | Leaf a | Branch (Tree a) a (Tree a)
+  deriving (Show)
+
+instance Functor Tree where
+  fmap = fmapDefault
+
+instance Foldable Tree where
+  foldMap = foldMapDefault
+
+instance Traversable Tree where
+  traverse g Empty = pure Empty
+  traverse g (Leaf a) = Leaf <$> g a
+  traverse g (Branch l a r) = Branch <$> traverse g l <*> g a <*> traverse g r
+
+exampleTree :: Tree String
+exampleTree = Branch (Leaf "abc") "foo" (Branch (Leaf "c") "bar" Empty)
 
 -- * Coerce
 
@@ -96,4 +138,12 @@ weird = coerce
 -- This results in compiler error
 --weird2 :: FirstName -> Bool
 --weird2 = coerce
+
+-- >>> plusTen "10.0"
+-- Just "20.0"
+
+plusTen :: String -> Maybe String
+plusTen s = case readMaybe @Double s of
+  Just v -> Just $ show (v + 10)
+  Nothing -> Nothing
 
