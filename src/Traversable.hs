@@ -102,25 +102,6 @@ foldMapDefault :: forall t a m. (Traversable t, Monoid m) => (a -> m) -> t a -> 
 --foldMapDefault g = getConst . traverse (Const . g)
 foldMapDefault = coerce (traverse @t @(Const m) @a @m)
 
--- * Tree
-
-data Tree a = Empty | Leaf a | Branch (Tree a) a (Tree a)
-  deriving (Show)
-
-instance Functor Tree where
-  fmap = fmapDefault
-
-instance Foldable Tree where
-  foldMap = foldMapDefault
-
-instance Traversable Tree where
-  traverse g Empty = pure Empty
-  traverse g (Leaf a) = Leaf <$> g a
-  traverse g (Branch l a r) = Branch <$> traverse g l <*> g a <*> traverse g r
-
-exampleTree :: Tree String
-exampleTree = Branch (Leaf "abc") "foo" (Branch (Leaf "c") "bar" Empty)
-
 -- * Coerce
 
 newtype FirstName = FirstName String deriving Show
@@ -222,13 +203,3 @@ instance (Traversable f, Traversable g) => Traversable (Compose f g) where
   traverse :: Applicative u => (a -> u b) -> Compose f g a -> u (Compose f g b)
   --traverse f (Compose fga) = Compose <$> traverse (traverse f) fga
   traverse f = fmap Compose . traverse (traverse f) . getCompose
-
-
--- Task'ish
---
--- How can we turn Tree a -> Tree Int
--- so that it numerates each value 1, 2....
---
--- >>> numerate exampleTree
--- Branch (Leaf 1) 2 (Branch (Leaf 3) 4 Empty)
---
