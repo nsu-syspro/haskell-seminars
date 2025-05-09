@@ -33,7 +33,7 @@ render (JArray xs)  = "[" ++ intercalate ", " (map render xs) ++ "]"
 render (JObject xs) = "{" ++ intercalate ", " (map renderPair xs) ++ "}"
  where
   renderPair :: (String, JValue) -> String
-  renderPair (k, v) = show k ++ ": " ++ render v
+  renderPair (k, v) = "\"" ++ k ++ "\": " ++ render v
 
 class JSON a where
   toJSON :: a -> JValue
