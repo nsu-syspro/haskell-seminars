@@ -28,7 +28,7 @@ render :: JValue -> String
 render JNull        = "null"
 render (JBool b)    = map toLower $ show b
 render (JNumber d)  = show d
-render (JString s)  = show s
+render (JString s)  = "\"" ++ s ++ "\""
 render (JArray xs)  = "[" ++ intercalate ", " (map render xs) ++ "]"
 render (JObject xs) = "{" ++ intercalate ", " (map renderPair xs) ++ "}"
  where
