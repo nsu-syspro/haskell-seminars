@@ -1,8 +1,10 @@
-import Prelude hiding (Monad, (>>=))
+import Prelude hiding (Monad, (>>=), (=<<))
 
 import Data.Functor.Identity
+import Data.Functor.Compose
 
 infixl 1 >>=
+infixr 1 =<<
 infixr 1 >=>
 
 class Applicative m => Monad m where
@@ -14,7 +16,7 @@ class Applicative m => Monad m where
   -- fmap  ::   (a ->   b) -> f a -> f b
   -- (<*>) :: f (a ->   b) -> f a -> f b
   -- (=<<) ::   (a -> m b) -> m a -> m b
-  
+
   ------------------------------------------
   -- | bind operator
   (>>=) :: m a -> (a -> m b) -> m b
@@ -44,7 +46,7 @@ class Applicative m => Monad m where
   --
   -- So 'pure' is an example such arrow
   (>=>) :: (b -> m c) -> (a -> m b) -> (a -> m c)
-  
+
   -- >=> via >>=
   f >=> g = \a -> g a >>= f
 
@@ -54,7 +56,7 @@ class Applicative m => Monad m where
   ------------------------------------------
   -- Combines computations from nested monads
   join :: m (m a) -> m a
-  
+
   -- join via >>=
   --join mma = mma >>= id
   --join = (>>= id)
@@ -88,6 +90,9 @@ class Applicative m => Monad m where
   return :: a -> m a
   return = pure
 
+(=<<) :: Monad m => (a -> m b) -> m a -> m b
+(=<<) = flip (>>=)
+
 -- * Default implementations for Functor and Applicative
 -- based on Monad
 
@@ -117,5 +122,49 @@ instance Monad [] where
 
 
 -- * Do-notation (see App.hs)
+--
+--                   do e → e
+--        do { e; stmts } → e >> do { stmts }
+--   do { v <- e; stmts } → e >>= \v -> do { stmts }
+-- do { let decls; stmts} → let decls in do { stmts }
+--
+-- Only for MonadFail m
+--
+-- do { (x:xs) <- e; stmts } → case e of { (x:xs) -> do { stmts }; _ -> fail "pattern error" }
+
+-- * Laws
+--
+-- - 'pure' is identity for >=> 
+--   pure >=> g  =  g
+--   g >=> pure  =  g
+-- - >=> is associative
+--   (g >=> h) >=> k  =  g >=> (h >=> k)
+
+
+-- For composition of two monads m and n we need them to be distributable using:
+--   distrib :: m (n a) -> n (m a)
+
+class Distrib m n where
+  distrib :: m (n a) -> n (m a)
+
+-- IO (Maybe Int) -- is IO computation that might fail
+-- Maybe (IO Int) -- is potentially IO computation
+
+instance (Monad m, Monad n, Distrib m n, Distrib n m) => Monad (Compose m n) where
+  -- _ :: m (n (m (n a))) -> m (n a)  ~ distrib m n
+  -- _ :: n (m (m (n a))) -> m (n a)  ~ join m m
+  -- _ :: n (m (n a)) -> m (n a)      ~ distrib m n
+  -- _ :: n (n (m a)) -> m (n a)      ~ join n n
+  -- _ :: n (m a) -> m (n a)
+  join :: Compose m n (Compose m n a) -> Compose m n a
+  --join = Compose . distrib . join . fmap distrib . fmap join . fmap (fmap getCompose) . distrib . getCompose
+  join = Compose . distrib . (>>= (distrib . join . fmap getCompose)) . distrib . getCompose
+  -- Compose m n (Compose m n a) ~ getCompose
+  -- m (n (Compose m n a))       ~ distrib
+  -- n (m (Compose m n a))       ~ fmap (fmap getCompose)
+  -- n (m (m (n a)))             ~ fmap join
+  -- n (m (n a))                 ~ fmap distrib
+  -- n (n (m a))                 ~ join
+  -- n (m a)                     ~ distrib
 
 

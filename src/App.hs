@@ -1,3 +1,6 @@
+import Control.Monad (void)
+import Control.Exception
+
 main :: IO ()
 main = putStrLn "Hello World!"
 
@@ -15,4 +18,12 @@ greeter = getLine >>= \name -> putStrLn ("Hello, " ++ name)
 greeter' :: IO ()
 greeter' = do
   name <- getLine
-  putStrLn ("Hello, " ++ name)
+  let greeting  = "Hello, " ++ name
+      greeting1 = greeting
+      greeting2 = "Hello, " ++ name
+  putStrLn greeting
+
+ioFail :: IO ()
+ioFail = void $ try @IOException $ readFile "bad"
+
+

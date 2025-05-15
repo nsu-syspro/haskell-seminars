@@ -63,6 +63,13 @@ instance Applicative (State s) where
   --      (a, s'') = sa s'
   --  in  (f a, s'') 
 
+instance Monad (State s) where
+  (>>=) :: State s a -> (a -> State s b) -> State s b
+  State sa >>= f = State $ \s ->
+    let (a, s') = sa s
+        State sb = f a
+    in  sb s'
+
 -- Task
 --
 -- How can we turn Tree a -> Tree Int
