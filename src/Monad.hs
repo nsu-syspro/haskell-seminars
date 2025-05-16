@@ -150,21 +150,20 @@ class Distrib m n where
 -- IO (Maybe Int) -- is IO computation that might fail
 -- Maybe (IO Int) -- is potentially IO computation
 
-instance (Monad m, Monad n, Distrib m n, Distrib n m) => Monad (Compose m n) where
-  -- _ :: m (n (m (n a))) -> m (n a)  ~ distrib m n
-  -- _ :: n (m (m (n a))) -> m (n a)  ~ join m m
-  -- _ :: n (m (n a)) -> m (n a)      ~ distrib m n
-  -- _ :: n (n (m a)) -> m (n a)      ~ join n n
-  -- _ :: n (m a) -> m (n a)
+instance (Monad m, Monad n, Distrib n m) => Monad (Compose m n) where
+  -- _ :: m (n (m (n a))) -> m (n a)  ~ distrib n m
+  -- _ :: m (m (n (n a))) -> m (n a)  ~ join m m
+  -- _ :: m (n (n a)) -> m (n a)      ~ join n n
+  -- _ :: m (n a) -> m (n a)
   join :: Compose m n (Compose m n a) -> Compose m n a
   --join = Compose . distrib . join . fmap distrib . fmap join . fmap (fmap getCompose) . distrib . getCompose
-  join = Compose . distrib . (>>= (distrib . join . fmap getCompose)) . distrib . getCompose
+  join = Compose . fmap join . join . fmap (distrib . fmap getCompose) . getCompose
   -- Compose m n (Compose m n a) ~ getCompose
-  -- m (n (Compose m n a))       ~ distrib
-  -- n (m (Compose m n a))       ~ fmap (fmap getCompose)
-  -- n (m (m (n a)))             ~ fmap join
-  -- n (m (n a))                 ~ fmap distrib
-  -- n (n (m a))                 ~ join
-  -- n (m a)                     ~ distrib
+  -- m (n (Compose m n a))       ~ fmap (fmap getCompose)
+  -- m (n (m (n a)))             ~ fmap distrib
+  -- m (m (n (n a)))             ~ join
+  -- m (n (n a))                 ~ fmap join
+  -- m (n a)                     ~ Compose
+  -- Compose m n a
 
 

@@ -1,3 +1,5 @@
+module State where
+
 import Tree
 
 import Data.Traversable
@@ -26,6 +28,9 @@ put s = State $ \_ -> ((), s)
 
 modify :: (s -> s) -> State s ()
 modify f = State $ \s -> ((), f s)
+
+gets :: (s -> a) -> State s a
+gets f = f <$> get
 
 -- foo :: Map k v -> b -> (c, Map k v)
 -- bar :: Map k v -> a -> (b, Map k v)
