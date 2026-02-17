@@ -1,6 +1,11 @@
 module Types where
 
 -- Synonyms 
+--
+-- Erased on early compilation stages.
+--
+-- Used for saving characters on very long type signatures
+-- and for documentation.
 
 type IntPair = (Int, Int)
 
@@ -12,6 +17,14 @@ t1 = 24
 
 inc :: StudentId -> StudentId
 inc x = x + 1
+
+-- Both allowed:
+
+f1 :: TeacherId
+f1 = inc t1
+
+f2 :: StudentId
+f2 = inc t1
 
 -- Algebraic Data Type (ADT)
 
