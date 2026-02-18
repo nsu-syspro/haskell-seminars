@@ -3,6 +3,8 @@ module Types where
 -- Synonyms 
 --
 -- Erased on early compilation stages.
+-- Denote *the same* type.
+-- No type safety!
 --
 -- Used for saving characters on very long type signatures
 -- and for documentation.
