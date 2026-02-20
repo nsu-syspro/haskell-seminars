@@ -162,6 +162,8 @@ height (Leaf _)     = 0
 height (Branch l r) = 1 + max (height l) (height r)
 
 isomorphic :: Tree a -> Tree a -> Bool
-isomorphic = undefined
+isomorphic (Leaf _) (Leaf _) = True
+isomorphic (Branch l1 r1) (Branch l2 r2) =
+  isomorphic l1 l2 && isomorphic r1 r2
 
 
