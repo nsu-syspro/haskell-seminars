@@ -24,6 +24,11 @@ zip' = zipWith (,)
 zipWith' :: (a -> b -> c) -> [a] -> [b] -> [c]
 zipWith' f xs ys = map (uncurry f) (zip xs ys)
 
+-- How to make it point-free?
+--
+--zipWith'' :: (a -> b -> c) -> [a] -> [b] -> [c]
+--zipWith'' f = (map (uncurry f)) . zip
+
 -- ($)
 f5 :: (a -> b) -> (a -> b)
 f5 = id
