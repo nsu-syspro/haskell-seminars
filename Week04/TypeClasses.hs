@@ -1,5 +1,8 @@
 {-# LANGUAGE Haskell2010 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module TypeClasses where
 
@@ -27,10 +30,10 @@ instance Eq Bool where
 
 -- Requires
 -- {-# LANGUAGE MultiParamTypeClasses #-}
-class A where
+class B where
   myId :: a -> a
 
-instance A where
+instance B where
   myId = id
 
 foo :: a -> a
@@ -64,4 +67,47 @@ onlyMod3 e = filter ((== Mod3 e) . Mod3)
 
 class ToInts a where
   toInts :: a -> [Int]
+
+instance ToInts Int where
+  --toInts x = [x]
+  toInts = (: [])
+
+instance ToInts Bool where
+  toInts False = [0]
+  toInts True  = [1]
+
+instance {-# OVERLAPS #-} ToInts [Int] where
+  toInts = id
+
+instance (ToInts a, ToInts b) => ToInts (a, b) where
+  toInts (x, y) = toInts x ++ toInts y
+
+instance ToInts a => ToInts [a] where
+  toInts = concatMap toInts
+
+instance Enum a => ToInts a where
+  toInts x = [fromEnum x]
+
+-- Truly undecidable instance
+
+data A a = A deriving Show
+
+class F x where
+  bar :: x -> x
+  bar = id
+
+--instance F (A a) => F (A a)
+
+instance F (A (A a)) => F (A a)
+
+
+data Foo x = Foo x
+  deriving Show
+
+newtype Bar x = Bar x
+  deriving Show
+
+test1 = case undefined of { _     -> 42 }
+test2 = case undefined of { Foo _ -> 42 }
+test3 = case undefined of { Bar _ -> 42 }
 
