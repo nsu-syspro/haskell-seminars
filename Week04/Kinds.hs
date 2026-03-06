@@ -1,0 +1,29 @@
+-- Kinds
+--
+-- Kinds relate to types just like types relate to values.
+--
+-- Related materials:
+-- - https://diogocastro.com/blog/2018/10/17/haskells-kind-system-a-primer/
+--
+-- ghci> :set -XNoStarIsType
+-- ghci> :kind Int
+-- Int :: Type
+-- ghci> :kind Maybe Int
+-- Maybe Int :: Type
+-- ghci> :kind Maybe
+-- Maybe :: Type -> Type
+-- ghci> :kind []
+-- [] :: Type -> Type
+-- ghci> :kind Either
+-- Either :: Type -> Type -> Type
+-- ghci> :kind (,)
+-- (,) :: Type -> Type -> Type
+-- ghci> :kind (->)
+-- (->) :: Type -> Type -> Type
+--
+-- Example of more complicated kind:
+--
+-- ghci> import Control.Monad.Cont
+-- ghci> :kind ContT
+-- ContT :: k -> (k -> Type) -> Type -> Type
+
