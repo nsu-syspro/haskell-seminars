@@ -1,17 +1,4 @@
-import Data.Maybe (maybeToList)
 import Data.Function (on)
-
-f1 :: (b -> c) -> (a -> b) -> a -> c
-f1 = (.)
-
-
-h1, h2 :: a -> Maybe a
-h1 = Just
-h2 = const Nothing
-
--- Data.Maybe.mapMaybe
-mapMaybe :: (a -> Maybe b) -> [a] -> [b]
-mapMaybe f = concatMap (maybeToList . f)
 
 g1, g2, g3 :: Ord a => (b -> a) -> (b -> b -> Ordering)
 g1 f x y = compare (f x) (f y)
