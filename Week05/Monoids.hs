@@ -4,7 +4,8 @@ import Prelude hiding (Semigroup(..), Monoid(..))
 import Data.List.NonEmpty (NonEmpty(..))
 
 import qualified Data.Monoid as M
-import Data.List (foldl')
+import Data.List (foldl', sortBy)
+import Data.Ord (comparing)
 
 class Semigroup a where
   {-# MINIMAL (<>) | sconcat #-}
@@ -90,3 +91,77 @@ instance Num a => Semigroup (Product a) where
 
 instance Num a => Monoid (Product a) where
   mempty = Product 1
+
+instance Semigroup a => Semigroup (Maybe a) where
+  Just x <> Just y = Just (x <> y)
+  Nothing <> y = y
+  x <> Nothing = x
+
+instance Semigroup a => Monoid (Maybe a) where
+  mempty = Nothing
+
+instance Semigroup [a] where
+  (<>) = (++)
+
+instance Monoid [a] where
+  mempty = []
+
+-- Endomorphism
+--
+-- f,g,h :: a -> a
+--
+--   (f . g) . h = f . (g . h)
+--
+-- f <> g = f . g
+--
+-- id . f = f . id = f
+
+newtype Endo a = Endo { appEndo :: a -> a }
+  
+instance Semigroup (Endo a) where
+  Endo f <> Endo g = Endo (f . g)
+
+instance Monoid (Endo a) where
+  mempty = Endo id
+
+-- ghci> (drop 5 <> take 5) [1..10]
+-- [6,7,8,9,10,1,2,3,4,5]
+--
+-- drop 5 :: [a] -> [a]
+--   (drop 5 <> take 5) [1..10]
+-- ~ drop 5 [1..10] ???? take 5 [1..10]
+-- ~ drop 5 [1..10] <> take 5 [1..10]
+
+instance Semigroup b => Semigroup (a -> b) where
+  f <> g = \a -> f a <> g a
+
+instance Monoid b => Monoid (a -> b) where
+  mempty :: a -> b
+  mempty = const mempty
+
+instance Semigroup Ordering where
+  EQ <> x = x
+  LT <> _ = LT
+  GT <> _ = GT
+
+instance Monoid Ordering where
+  mempty = EQ
+
+-- | Sort strings:
+--   1. By length
+--   2. By number vowels
+--   3. Lexicographically
+--
+-- This is monoid:
+--   a -> (a -> Ordering)
+-- because this is also monoid
+--   a -> Ordering
+--
+mySort :: [String] -> [String]
+mySort = sortBy $
+     comparing length
+  <> comparing (length . filter isVowel)
+  <> compare
+
+isVowel :: Char -> Bool
+isVowel = (`elem` "aeiou") -- y -- not a vowel
