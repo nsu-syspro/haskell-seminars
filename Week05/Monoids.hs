@@ -78,6 +78,10 @@ average''' xs =
   let (M.Sum s, M.Sum l) = foldl' (M.<>) M.mempty $ map (\x -> (M.Sum x, M.Sum 1)) xs
   in fromIntegral s / fromIntegral l
 
+-- More info about performance analysis of average:
+--
+--   https://book.realworldhaskell.org/read/profiling-and-optimization.html
+
 newtype Product a = Product { getProduct :: a }
   deriving Show
 
