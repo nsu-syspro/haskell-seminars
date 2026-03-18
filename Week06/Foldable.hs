@@ -43,7 +43,9 @@ class Foldable t where
   length  :: t a -> Int
   length = getSum . foldMap (const (Sum 1))
   
---  elem    :: Eq a => a -> t a -> Bool
+  elem    :: Eq a => a -> t a -> Bool
+  elem v = getAny . foldMap (Any . (== v))
+
 --  maximum :: Ord a => t a -> a
 --  minimum :: Ord a => t a -> a
 
@@ -71,13 +73,23 @@ newtype Endo' a = Endo' { appEndo' :: a -> a }
 instance Semigroup (Endo' a) where
   Endo' f <> Endo' g =
     let f' !x = f x
-        g' !x = g x
+        g' x = g x
     in  Endo' (f' . g')
 
 instance Monoid (Endo' a) where
   mempty = Endo' id
 
 -- * Instances
+
+myconcat' :: Monoid m => [m] -> m
+myconcat' = go mempty
+  where
+    go !acc [] = acc
+    go !acc (x:xs) = go (x <> acc) xs
+
+myconcat :: Monoid m => [m] -> m
+myconcat [] = mempty
+myconcat (x:xs) = x <> myconcat xs
 
 instance Foldable [] where
   foldMap f = mconcat . map f
