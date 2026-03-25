@@ -1,6 +1,7 @@
 import Prelude hiding (Foldable(..))
 
 import Data.Monoid (Endo(..), Sum(..), Product(..), Dual(..))
+import Data.Semigroup (Max(..))
 
 class Foldable t where
   {-# MINIMAL foldMap | foldr #-}
@@ -46,7 +47,12 @@ class Foldable t where
   elem    :: Eq a => a -> t a -> Bool
   elem v = getAny . foldMap (Any . (== v))
 
---  maximum :: Ord a => t a -> a
+  maximum :: Ord a => t a -> a
+  --maximum = getMax . foldMap Max
+  maximum xs = case toList xs of
+    [] -> error "..."
+    (x:xs) -> foldl' max x xs
+
 --  minimum :: Ord a => t a -> a
 
   sum :: Num a => t a -> a
