@@ -46,6 +46,27 @@ instance Applicative ZipList where
   ZipList fs <*> ZipList xs = ZipList $ zipWith ($) fs xs
   pure x = ZipList (repeat x)
 
+-- Writer functor/monad ~~> (e, a)
+instance Monoid e => Applicative ((,) e) where
+  pure x = (mempty, x)
+  (e1, f) <*> (e2, x) = (e1 <> e2, f x) 
+
+-- Reader functor/monad ~~> (e -> a)
+instance Applicative ((->) e) where
+  pure :: a -> (e -> a)
+  pure = const
+  (<*>) :: (e -> (a -> b)) -> (e -> a) -> (e -> b)
+  fg <*> fa = \e -> fg e (fa e)
+
+-- State monad ~~> (s -> (a, s))
+--
+-- get    :: State s s
+-- gets   :: (s -> a) -> State s a
+-- put    :: s -> State s ()
+-- modify :: (s -> s) -> State s ()
+--
+-- https://hackage-content.haskell.org/package/mtl/docs/Control-Monad-State.html
+
 data Student = Student String Int
 
 mkStudent :: Maybe String -> Maybe Int -> Maybe Student
