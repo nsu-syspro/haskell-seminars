@@ -1,7 +1,8 @@
 import Prelude hiding (Traversable(..))
 import Control.Monad.Identity (Identity(..))
 import Data.Coerce (coerce)
-import Control.Applicative (liftA)
+import Control.Applicative (liftA, ZipList (..))
+import Data.Functor (($>))
 
 class (Functor t, Foldable t) => Traversable t where
   {-# MINIMAL (traverse | sequenceA) #-}
@@ -99,6 +100,8 @@ instance Traversable [] where
 data Tree a = Empty | Leaf a | Branch (Tree a) (Tree a)
   deriving (Show)
 
+exampleTree = Branch (Branch (Leaf 'a') (Leaf 'b')) (Leaf 'c')
+
 instance Functor Tree where
   fmap :: (a -> b) -> Tree a -> Tree b
   fmap f Empty        = Empty
@@ -117,3 +120,65 @@ instance Traversable Tree where
   traverse f (Leaf x)     = Leaf <$> f x
   traverse f (Branch l r) = Branch <$> traverse f l <*> traverse f r
 
+-- * Transpose matrix [[a]]
+
+exampleMatrix = [[1,2,3],[4,5,6]]
+
+squareMatrix = [[1,2,3],[4,5,6],[7,8,9]]
+
+-- sequenceA does not work:
+--
+-- >>> sequenceA exampleMatrix
+-- [[1,4],[1,5],[1,6],[2,4],[2,5],[2,6],[3,4],[3,5],[3,6]]
+
+-- >>> sequenceA (fmap ZipList exampleMatrix)
+-- ZipList {getZipList = [[1,4],[2,5],[3,6]]}
+-- >>> traverse ZipList exampleMatrix
+-- ZipList {getZipList = [[1,4],[2,5],[3,6]]}
+
+-- >>> transpose squareMatrix
+-- [[1,4,7],[2,5,8],[3,6,9]]
+
+transpose :: [[a]] -> [[a]]
+transpose = getZipList . traverse ZipList
+
+-- * Applicative trees
+
+-- >>> exampleListTree
+-- Branch (Branch (Leaf [1,2,3]) (Leaf [1,2,3])) (Leaf [1,2,3])
+exampleListTree = [1,2,3] <$ exampleTree
+
+-- >>> f1 exampleListTree
+-- [Branch (Branch (Leaf 1) (Leaf 1)) (Leaf 1),Branch (Branch (Leaf 1) (Leaf 1)) (Leaf 2),Branch (Branch (Leaf 1) (Leaf 1)) (Leaf 3),Branch (Branch (Leaf 1) (Leaf 2)) (Leaf 1),Branch (Branch (Leaf 1) (Leaf 2)) (Leaf 2),Branch (Branch (Leaf 1) (Leaf 2)) (Leaf 3),Branch (Branch (Leaf 1) (Leaf 3)) (Leaf 1),Branch (Branch (Leaf 1) (Leaf 3)) (Leaf 2),Branch (Branch (Leaf 1) (Leaf 3)) (Leaf 3),Branch (Branch (Leaf 2) (Leaf 1)) (Leaf 1),Branch (Branch (Leaf 2) (Leaf 1)) (Leaf 2),Branch (Branch (Leaf 2) (Leaf 1)) (Leaf 3),Branch (Branch (Leaf 2) (Leaf 2)) (Leaf 1),Branch (Branch (Leaf 2) (Leaf 2)) (Leaf 2),Branch (Branch (Leaf 2) (Leaf 2)) (Leaf 3),Branch (Branch (Leaf 2) (Leaf 3)) (Leaf 1),Branch (Branch (Leaf 2) (Leaf 3)) (Leaf 2),Branch (Branch (Leaf 2) (Leaf 3)) (Leaf 3),Branch (Branch (Leaf 3) (Leaf 1)) (Leaf 1),Branch (Branch (Leaf 3) (Leaf 1)) (Leaf 2),Branch (Branch (Leaf 3) (Leaf 1)) (Leaf 3),Branch (Branch (Leaf 3) (Leaf 2)) (Leaf 1),Branch (Branch (Leaf 3) (Leaf 2)) (Leaf 2),Branch (Branch (Leaf 3) (Leaf 2)) (Leaf 3),Branch (Branch (Leaf 3) (Leaf 3)) (Leaf 1),Branch (Branch (Leaf 3) (Leaf 3)) (Leaf 2),Branch (Branch (Leaf 3) (Leaf 3)) (Leaf 3)]
+-- >>> f2 exampleListTree
+-- [Branch (Branch (Leaf 1) (Leaf 1)) (Leaf 1),Branch (Branch (Leaf 2) (Leaf 2)) (Leaf 2),Branch (Branch (Leaf 3) (Leaf 3)) (Leaf 3)]
+
+f1 :: Tree [a] -> [Tree a]
+f1 = sequenceA
+
+f2 :: Tree [a] -> [Tree a]
+f2 = getZipList . traverse ZipList
+
+instance Applicative Tree where
+  pure :: a -> Tree a
+  pure = Leaf
+
+  Empty <*> _ = Empty
+  _ <*> Empty = Empty
+  Leaf f <*> t = fmap f t
+  Branch l r <*> t = Branch (l <*> t) (r <*> t)
+
+-- >>> (id <$ exampleTree) <*> Empty
+-- Empty
+--
+-- >>> g1 [Leaf 1, Branch (Leaf 2) Empty]
+-- Branch (Leaf [1,2]) Empty
+-- >>> g1 [Leaf 1, Branch (Leaf 2) Empty, Branch (Leaf 3) (Leaf 4)]
+-- Branch (Branch (Leaf [1,2,3]) (Leaf [1,2,4])) Empty
+-- >>> g1 [Leaf 1, Branch (Leaf 2) (Leaf 3)]
+-- Branch (Leaf [1,2]) (Leaf [1,3])
+-- >>> g1 [Leaf 1, Branch (Leaf 2) (Leaf 3), Branch (Leaf 4) (Leaf 5)]
+-- Branch (Branch (Leaf [1,2,4]) (Leaf [1,2,5])) (Branch (Leaf [1,3,4]) (Leaf [1,3,5]))
+
+g1 :: [Tree a] -> Tree [a]
+g1 = sequenceA
