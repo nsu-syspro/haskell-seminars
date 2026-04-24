@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 module State where
 
 newtype Reader e a = Reader (e -> a)
@@ -59,15 +60,84 @@ data Tree a = Empty | Leaf a | Branch (Tree a) a (Tree a)
 exampleTree :: Tree Char
 exampleTree = Branch (Branch (Leaf 'a') 'b' (Leaf 'c')) 'd' (Leaf 'e')
 
+-- Enumerates given tree in the order of traversal:
+--
 -- >>> numerate exampleTree
 -- Branch (Branch (Leaf 1) 2 (Leaf 3)) 4 (Leaf 5)
 
 numerate :: Tree a -> Tree Int
-numerate tree = evalState (traverse (const step) tree) 1
+numerate tree = evalState traverseTree 1
   where
     step :: State Int Int
+    step = get <* modify (+1)
+
+    traverseTree :: State Int (Tree Int)
+    traverseTree = traverse (const step) tree
+
+-- >>> merge [1..] exampleTree
+-- Branch (Branch (Leaf 1) 2 (Leaf 3)) 4 (Leaf 5)
+-- >>> merge ['a'..'z'] exampleTree
+-- Branch (Branch (Leaf 'a') 'b' (Leaf 'c')) 'd' (Leaf 'e')
+-- >>> merge ['a','b','c'] exampleTree
+-- *** Exception: Prelude.head: empty list
+
+merge :: [b] -> Tree a -> Tree b
+merge xs tree = evalState traverseTree xs
+  where
+    step :: State [b] b
+    step = gets head <* modify tail
+
+    traverseTree :: State [b] (Tree b)
+    traverseTree = traverse (const step) tree
+
+-- >>> mergeDefault 0 [1..] exampleTree
+-- Branch (Branch (Leaf 1) 2 (Leaf 3)) 4 (Leaf 5)
+-- >>> mergeDefault 'x' ['a','b','c'] exampleTree
+-- Branch (Branch (Leaf 'a') 'b' (Leaf 'c')) 'x' (Leaf 'x')
+
+mergeDefault :: b -> [b] -> Tree a -> Tree b
+mergeDefault def input = merge (input ++ repeat def)
+
+mergeDefault' :: forall a b. b -> [b] -> Tree a -> Tree b
+mergeDefault' def input tree = evalState traverseTree input
+  where
+    step :: State [b] b
     step = do
-      x <- get
-      modify (+1)
-      pure x
-      
+      xs <- get
+      case xs of
+        (x : rest) -> x <$ put rest
+        [] -> pure def
+
+    traverseTree :: State [b] (Tree b)
+    traverseTree = traverse (const step) tree
+
+-- Idea:
+--            Tree a -> Tree (Maybe b)
+-- sequenceA: Tree (Maybe b) -> Maybe (Tree b)
+--
+-- >>> mergeMaybe [1..] exampleTree
+-- Just (Branch (Branch (Leaf 1) 2 (Leaf 3)) 4 (Leaf 5))
+-- >>> mergeMaybe ['a','b','c'] exampleTree
+-- Nothing
+mergeMaybe :: forall a b. [b] -> Tree a -> Maybe (Tree b)
+mergeMaybe input tree = sequenceA maybeTree
+  where
+    maybeTree :: Tree (Maybe b)
+    maybeTree = evalState traverseTree input
+
+    traverseTree :: State [b] (Tree (Maybe b))
+    traverseTree = traverse (const step) tree
+
+--    step :: State [b] (Maybe b)
+--    step = do
+--      xs <- get
+--      case xs of
+--        [] -> pure Nothing
+--        (x:rest) -> Just x <$ put rest
+
+    step :: State [b] (Maybe b)
+    step = get >>= \case
+      [] -> pure Nothing
+      (x:rest) -> Just x <$ put rest
+
+
