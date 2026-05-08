@@ -1,0 +1,48 @@
+-- Church encoding
+
+true = \t.\f.t
+false = \t.\f.f
+
+-- and F F = F
+-- and T F = F
+-- and F T = F
+-- and T T = T
+--
+-- and F _ = F
+-- and T r = r
+and = \l.\r. (\t.\f. l (r t f) f)
+or  = \l.\r. (\t.\f. l t (r t f))
+
+-- if b t f = if b then t else f
+if = \b.\then.\else. b then else
+if' = \b.b
+
+0 = \s.\z.z
+1 = \s.\z.s z
+2 = \s.\z.s (s z)
+3 = \s.\z.s (s (s z))
+4 = \s.\z.s (s (s (s z)))
+5 = \s.\z.s (s (s (s (s z))))
+6 = \s.\z.s (s (s (s (s (s z)))))
+7 = \s.\z.s (s (s (s (s (s (s z))))))
+8 = \s.\z.s (s (s (s (s (s (s (s z)))))))
+9 = \s.\z.s (s (s (s (s (s (s (s (s z))))))))
+10 = \s.\z.s (s (s (s (s (s (s (s (s (s z)))))))))
+11 = \s.\z.s (s (s (s (s (s (s (s (s (s (s z))))))))))
+12 = \s.\z.s (s (s (s (s (s (s (s (s (s (s (s z)))))))))))
+13 = \s.\z.s (s (s (s (s (s (s (s (s (s (s (s (s z))))))))))))
+
+succ = \n. (\s.\z. s (n s z))
+add = \x.\y. (\s.\z. y s (x s z))
+
+iter = \n.\s.\z. n s z
+
+pair = \a.\b. (\q. q a b)
+fst  = \p. p (\a.\b. a)
+snd  = \p. p (\a.\b. b)
+
+-- Predecessor
+
+pred = \n. fst (predPair n)
+predPair = \n. iter n step (pair 0 0)
+step = \p. pair (snd p) (succ (snd p))
